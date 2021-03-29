@@ -62,7 +62,8 @@ userSchema.methods.generateAuthToken= async function(){
     return token
 }
 
-// toJSON method is called whenever we send back method
+// toJSON method is called whenever we send back
+// and we choose what we will show
 userSchema.methods.toJSON= function (){
     const user=this
     const userObject = user.toObject()
