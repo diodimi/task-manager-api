@@ -50,6 +50,13 @@ const userSchema=new mongoose.Schema({
     }]
 })
 
+// LIKE FOREIGN KEY IN MYSQL
+userSchema.virtual('tasks',{
+    ref:'Task',
+    localField:'_id',
+    foreignField:'owner'
+})
+
 // We are using methods only when we call the function from a particular user
 userSchema.methods.generateAuthToken= async function(){
     const user=this
