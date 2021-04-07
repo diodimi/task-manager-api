@@ -2,6 +2,8 @@ const express=require('express')
 const User=require('../models/user')
 const auth=require('../middleware/auth')
 const router = new express.Router()
+const multer=require('multer')
+
 
 router.post('/users',async (req,res)=>{
     const user= new User(req.body)
@@ -49,6 +51,29 @@ router.post('/users/logoutAll',auth,async(req,res)=>{
     }catch(e){
         res.status(500).send()
     }
+})
+
+const upload = multer({
+    dest:'avatars',
+    limits:{
+        fileSize:1000000
+    },
+    fileFilter(req,file,cb){
+        // Check file type
+        if(!file.originalname.match(/\.(jpg|jpeg|png)$/)){
+            return cb(new Error('Please upload a valid type file!'))
+        }
+        cb(undefined,true)
+    }
+})
+
+router.post('/users/me/avatar',upload.single('avatar') ,(req,res)=>{
+    
+    res.send()
+    
+},(error,req,res,next)=>{
+    // The message we send in case we catch error
+    res.status(400).send({error:error.message})
 })
 
 
