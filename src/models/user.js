@@ -66,7 +66,7 @@ userSchema.virtual('tasks',{
 // We are using methods only when we call the function from a particular user
 userSchema.methods.generateAuthToken= async function(){
     const user=this
-    const token=jwt.sign({_id:user._id.toString()},'thisismynewtoken')
+    const token=jwt.sign({_id:user._id.toString()},process.env.JWT_SECRET)
 
     // We use concat to add to the existing tokens array the new token
     user.tokens=user.tokens.concat({token})
