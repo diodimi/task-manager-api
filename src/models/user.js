@@ -1,68 +1,84 @@
-const mongoose = require('mongoose')
-const validator = require('validator')
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const Task = require('./task')
+const mongoose = require('mongoose');
+const validator=require('validator')
+const bcrypt=require('bcryptjs')
+const jwt=require('jsonwebtoken')
+const Task=require('./task')
 
-const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-        trim: true
+const userSchema=new mongoose.Schema({
+    name:{
+            type:String,
+            required:true,
+            trim:true
     },
-    email: {
-        type: String,
-        unique: true,
+    email:{
+        type:String,
+        unique:true,
+        required:true,
+        trim:true,
+        lowercase:true,
+        validate(value){
+            if(!validator.isEmail(value)){
+                throw new Error('Email is invalid') 
+            }
+        }
+    },  
+    age:{
+        type:Number,
+        default:0,
+        validate(value){
+            if(value<0){
+                throw new Error('Age must be positive number!!')
+            }
+        }
+    },
+    password:{
+        type:String,
         required: true,
         trim: true,
-        lowercase: true,
-        validate(value) {
-            if (!validator.isEmail(value)) {
-                throw new Error('Email is invalid')
+        minlength:7,
+        validate(value){
+            if(value.toLowerCase().includes("Password")){
+                throw new Error('Password must not include word password!')
             }
         }
     },
-    password: {
-        type: String,
-        required: true,
-        minlength: 7,
-        trim: true,
-        validate(value) {
-            if (value.toLowerCase().includes('password')) {
-                throw new Error('Password cannot contain "password"')
-            }
-        }
-    },
-    age: {
-        type: Number,
-        default: 0,
-        validate(value) {
-            if (value < 0) {
-                throw new Error('Age must be a postive number')
-            }
-        }
-    },
-    tokens: [{
-        token: {
-            type: String,
-            required: true
+    tokens:[{
+        token:{
+            type:String,
+            required:true
         }
     }],
-    avatar: {
-        type: Buffer
+    avatar:{
+        type:Buffer
     }
-}, {
-    timestamps: true
+},{
+    // Saving the created time and updated time
+    timestamps:true
 })
 
-userSchema.virtual('tasks', {
-    ref: 'Task',
-    localField: '_id',
-    foreignField: 'owner'
+// LIKE FOREIGN KEY IN MYSQL
+userSchema.virtual('tasks',{
+    ref:'Task',
+    localField:'_id',
+    foreignField:'owner'
 })
 
-userSchema.methods.toJSON = function () {
-    const user = this
+// We are using methods only when we call the function from a particular user
+userSchema.methods.generateAuthToken= async function(){
+    const user=this
+    const token=jwt.sign({_id:user._id.toString()},process.env.JWT_SECRET)
+
+    // We use concat to add to the existing tokens array the new token
+    user.tokens=user.tokens.concat({token})
+    await user.save()
+
+    return token
+}
+
+// toJSON method is called whenever we send back
+// and we choose what we will show
+userSchema.methods.toJSON= function (){
+    const user=this
     const userObject = user.toObject()
 
     delete userObject.password
@@ -72,50 +88,41 @@ userSchema.methods.toJSON = function () {
     return userObject
 }
 
-userSchema.methods.generateAuthToken = async function () {
-    const user = this
-    const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET)
+userSchema.statics.findByCredentials= async(email,password)=>{
+    const user= await User.findOne({email})
 
-    user.tokens = user.tokens.concat({ token })
-    await user.save()
-
-    return token
-}
-
-userSchema.statics.findByCredentials = async (email, password) => {
-    const user = await User.findOne({ email })
-
-    if (!user) {
-        throw new Error('Unable to login')
+    if(!user){
+        throw new Error('Unable to login!')
     }
 
-    const isMatch = await bcrypt.compare(password, user.password)
+    const isMatch=await bcrypt.compare(password,user.password)
 
-    if (!isMatch) {
-        throw new Error('Unable to login')
+    if(!isMatch){
+        throw new Error('Unable to login!')
     }
 
     return user
 }
 
-// Hash the plain text password before saving
-userSchema.pre('save', async function (next) {
-    const user = this
+// Hash the plain text password
+userSchema.pre('save',async function (next){
+    const user=this
 
-    if (user.isModified('password')) {
-        user.password = await bcrypt.hash(user.password, 8)
+    // Τον κανουμε encrypt μόνο όταν αλλάζει η δημιουργείται
+    if(user.isModified('password')){
+        user.password=await bcrypt.hash(user.password,8)
     }
 
     next()
 })
 
-// Delete user tasks when user is removed
-userSchema.pre('remove', async function (next) {
-    const user = this
-    await Task.deleteMany({ owner: user._id })
+// Delete user tasks when users remove
+userSchema.pre('remove',async function(next){
+    const user=this
+    await Task.deleteMany({owner:user._id})
     next()
 })
 
-const User = mongoose.model('User', userSchema)
+const User = mongoose.model('User',userSchema)
 
-module.exports = User
+module.exports= User
