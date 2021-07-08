@@ -1,8 +1,8 @@
 # About the project
 This is a creation account project where I learned:
--How to manage requests(with Postman).
--How to hash valuable informations.
--How to manage mongoDB.
+- How to manage requests(with Postman).
+- How to hash valuable informations.
+- How to manage mongoDB.
 
 ## Installation
 1. Install mongoDB.
